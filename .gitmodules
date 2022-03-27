@@ -1,0 +1,4 @@
+[submodule "SekiroFpsUnlockAndMore"]
+	path = externals/SekiroFpsUnlockAndMore
+	url = https://github.com/cathyjf/SekiroFpsUnlockAndMore
+	branch = quiet-mode
