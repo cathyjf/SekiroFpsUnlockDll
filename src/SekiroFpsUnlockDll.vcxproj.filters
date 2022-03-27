@@ -39,6 +39,13 @@
     </ResourceCompile>
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\externals\SekiroFpsUnlockAndMore\SekiroFpsUnlockAndMore\bin\x64\Release\SekiroFpsUnlockAndMore.exe" />
+    <None Include="..\externals\SekiroFpsUnlockAndMore\SekiroFpsUnlockAndMore\bin\x64\Release\SekiroFpsUnlockAndMore.exe">
+      <Filter>Resource Files</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Xml Include="config\SekiroFpsUnlockAndMore.xml">
+      <Filter>Resource Files</Filter>
+    </Xml>
   </ItemGroup>
 </Project>

@@ -50,7 +50,9 @@ END
 // RCDATA
 //
 
-IDR_RCDATA1             RCDATA                  "..\\externals\\SekiroFpsUnlockAndMore\\SekiroFpsUnlockAndMore\\bin\\x64\\Release\\SekiroFpsUnlockAndMore.exe"
+IDR_FPSEXE              RCDATA                  "..\\externals\\SekiroFpsUnlockAndMore\\SekiroFpsUnlockAndMore\\bin\\x64\\Release\\SekiroFpsUnlockAndMore.exe"
+
+IDR_FPSCONFIG           RCDATA                  "config\\SekiroFpsUnlockAndMore.xml"
 
 #endif    // English (United States) resources
 /////////////////////////////////////////////////////////////////////////////

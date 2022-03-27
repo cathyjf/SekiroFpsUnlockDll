@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<SekiroFpsUnlockAndMore xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <gameVersionNotify>true</gameVersionNotify>
+  <cameraAdjustNotify>false</cameraAdjustNotify>
+  <peasantInput>false</peasantInput>
+  <cbFramelock>true</cbFramelock>
+  <tbFramelock>144</tbFramelock>
+  <cbAddResolution>false</cbAddResolution>
+  <tbWidth>2560</tbWidth>
+  <tbHeight>1080</tbHeight>
+  <cbFov>false</cbFov>
+  <tbFov>25</tbFov>
+  <cbBorderless>false</cbBorderless>
+  <cbBorderlessStretch>false</cbBorderlessStretch>
+  <cbLogStats>false</cbLogStats>
+  <exGameMods>true</exGameMods>
+  <cbCamAdjust>false</cbCamAdjust>
+  <cbCamReset>false</cbCamReset>
+  <cbAutoLoot>false</cbAutoLoot>
+  <cbDragonrot>false</cbDragonrot>
+  <cbDeathPenalty>false</cbDeathPenalty>
+  <hiddenDPs>0</hiddenDPs>
+  <cbEmblemUpgrade>false</cbEmblemUpgrade>
+  <cbGameSpeed>false</cbGameSpeed>
+  <tbGameSpeed>100</tbGameSpeed>
+  <cbPlayerSpeed>false</cbPlayerSpeed>
+  <tbPlayerSpeed>100</tbPlayerSpeed>
+  <exGuide>false</exGuide>
+</SekiroFpsUnlockAndMore>

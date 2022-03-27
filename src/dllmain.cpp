@@ -21,10 +21,12 @@ public:
             std::basic_string<T>{ std::move(string) } {}
     using std::basic_string<T>::find_last_of;
     using std::basic_string<T>::substr;
+    using std::basic_string<T>::length;
     using std::basic_string<T>::c_str;
 
     LimitedString(LimitedString &&) noexcept = default;
     LimitedString(const LimitedString &) = delete;
+    LimitedString(const std::basic_string<T> &) = delete;
     LimitedString &operator=(const LimitedString &) = delete;
 };
 
@@ -68,14 +70,13 @@ private:
 
 class FileData {
 public:
-    FileData(FileHandleWrapper &&hFile, STDWSTRING &&filename) :
-            _hFile{ std::move(hFile) },
-            _filename{ std::move(filename) } {}
+    FileData(FileHandleWrapper &&hFile, STDWSTRING &&filename, BOOL erase) :
+        _hFile{ std::move(hFile) },
+        _filename{ std::move(filename) },
+        _erase{ erase } {}
 
     ~FileData() {
-        if (!_hFile) {
-            // If we get here, it means this object's data has been moved to
-            // another object using move semantics.
+        if (!_hFile || !_erase) {
             return;
         }
         _hFile.reset();
@@ -93,9 +94,10 @@ public:
 private:
     FileHandleWrapper _hFile;
     STDWSTRING _filename;
+    BOOL _erase;
 };
 
-std::optional<FileData> WriteExe(HMODULE hModule, LPVOID pExe, DWORD szExe) {
+std::optional<STDWSTRING> GetModulePath(HMODULE hModule) {
     WCHAR wcModuleFilename[MAX_PATH + 1];
     const DWORD szModuleFilename = GetModuleFileName(
             hModule, wcModuleFilename, MAX_PATH);
@@ -104,15 +106,28 @@ std::optional<FileData> WriteExe(HMODULE hModule, LPVOID pExe, DWORD szExe) {
     }
     const STDWSTRING moduleFilename{ wcModuleFilename };
     const size_t lastSlash = moduleFilename.find_last_of(L'\\');
-    const STDWSTRING modulePath{ moduleFilename.substr(0, lastSlash + 1) };
+    return { STDWSTRING { moduleFilename.substr(0, lastSlash + 1) } };
+}
+
+std::optional<FileData> WriteDataToFile(
+        const STDWSTRING &modulePath, LPVOID pExe, DWORD szExe,
+        const std::optional<STDWSTRING> &filename, BOOL eraseOnClose) {
     WCHAR tempFile[MAX_PATH + 1];
-    const UINT uUnique = GetTempFileName(
-            modulePath.c_str(), L"fps", 0, tempFile);
-    if (uUnique == 0) {
-        return std::nullopt;
+    if (!filename) {
+        const UINT uUnique = GetTempFileName(
+                modulePath.c_str(), L"fps", 0, tempFile);
+        if (uUnique == 0) {
+            return std::nullopt;
+        }
+    } else {
+        wcscpy_s(tempFile, MAX_PATH + 1, modulePath.c_str());
+        const auto modulePathLength = modulePath.length();
+        wcscpy_s(tempFile + modulePathLength,
+                MAX_PATH + 1 - modulePathLength, filename->c_str());
     }
-    FileHandleWrapper hFile{ CreateFile(tempFile, GENERIC_WRITE,
-            FILE_SHARE_READ, NULL, CREATE_ALWAYS,
+    FileHandleWrapper hFile{ CreateFile(tempFile,
+            GENERIC_READ | GENERIC_WRITE,
+            FILE_SHARE_READ, NULL, filename ? CREATE_NEW : CREATE_ALWAYS,
             FILE_ATTRIBUTE_NORMAL, NULL) };
     if (*hFile == INVALID_HANDLE_VALUE) {
         return std::nullopt;
@@ -128,7 +143,32 @@ std::optional<FileData> WriteExe(HMODULE hModule, LPVOID pExe, DWORD szExe) {
     if (!hFileRead) {
         return std::nullopt;
     }
-    return FileData{ std::move(hFileRead), std::move(tempFile) };
+    return FileData{ std::move(hFileRead), std::move(tempFile), eraseOnClose };
+}
+
+std::optional<FileData> WriteResourceToFile(
+        HMODULE hModule, const STDWSTRING &modulePath, int resourceIndex,
+        std::optional<STDWSTRING> filename = std::nullopt,
+        BOOL eraseOnClose = TRUE) {
+    const HRSRC hRes = FindResource(
+            hModule, MAKEINTRESOURCE(resourceIndex), RT_RCDATA);
+    if (!hRes) {
+        return std::nullopt;
+    }
+    const DWORD szData = SizeofResource(hModule, hRes);
+    if (szData == 0) {
+        return std::nullopt;
+    }
+    const HGLOBAL hData = LoadResource(hModule, hRes);
+    if (!hData) {
+        return std::nullopt;
+    }
+    const LPVOID pData = LockResource(hData);
+    if (!pData) {
+        return std::nullopt;
+    }
+    return { WriteDataToFile(
+            modulePath, pData, szData, filename, eraseOnClose) };
 }
 
 DWORD ExecuteAndWaitForExe(const FileData &&exeData) {
@@ -167,27 +207,18 @@ DWORD ExecuteAndWaitForExe(const FileData &&exeData) {
 DWORD WINAPI ThreadProc(LPVOID lpParameter) {
     const std::unique_ptr<ThreadData> pData{
             reinterpret_cast<ThreadData *>(lpParameter)};
-    const HRSRC hRes = FindResource(pData->hModule,
-            MAKEINTRESOURCE(IDR_RCDATA1), RT_RCDATA);
-    if (!hRes) {
+    auto &&modulePath{ GetModulePath(pData->hModule) };
+    if (!modulePath) {
         return 1;
     }
-    const DWORD szExe = SizeofResource(pData->hModule, hRes);
-    if (szExe == 0) {
-        return 1;
-    }
-    const HGLOBAL hData = LoadResource(pData->hModule, hRes);
-    if (!hData) {
-        return 1;
-    }
-    const LPVOID pExe = LockResource(hData);
-    if (!pExe) {
-        return 1;
-    }
-    auto &&exeData = WriteExe(pData->hModule, pExe, szExe);
+    auto &&exeData{ WriteResourceToFile(
+            pData->hModule, *modulePath, IDR_FPSEXE) };
     if (!exeData) {
         return 1;
     }
+    auto &&configData{ WriteResourceToFile(
+            pData->hModule, *modulePath, IDR_FPSCONFIG,
+            L"SekiroFpsUnlockAndMore.xml", FALSE) };
     return ExecuteAndWaitForExe(std::move(*exeData));
 }
 
