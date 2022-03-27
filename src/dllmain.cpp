@@ -11,7 +11,24 @@ struct ThreadData {
     HMODULE hModule;
 };
 
-typedef std::basic_string<WCHAR> STDWSTRING;
+namespace {
+
+template <class T>
+class LimitedString : private std::basic_string<T> {
+public:
+    LimitedString(const T *cstr) : std::basic_string<T>{ cstr } {};
+    LimitedString(std::basic_string<T> &&string) :
+            std::basic_string<T>{ std::move(string) } {}
+    using std::basic_string<T>::find_last_of;
+    using std::basic_string<T>::substr;
+    using std::basic_string<T>::c_str;
+
+    LimitedString(LimitedString &&) noexcept = default;
+    LimitedString(const LimitedString &) = delete;
+    LimitedString &operator=(const LimitedString &) = delete;
+};
+
+typedef LimitedString<WCHAR> STDWSTRING;
 
 class FileHandleWrapper {
 public:
@@ -87,7 +104,7 @@ std::optional<FileData> WriteExe(HMODULE hModule, LPVOID pExe, DWORD szExe) {
     }
     const STDWSTRING moduleFilename{ wcModuleFilename };
     const size_t lastSlash = moduleFilename.find_last_of(L'\\');
-    const STDWSTRING modulePath = moduleFilename.substr(0, lastSlash + 1);
+    const STDWSTRING modulePath{ moduleFilename.substr(0, lastSlash + 1) };
     WCHAR tempFile[MAX_PATH + 1];
     const UINT uUnique = GetTempFileName(
             modulePath.c_str(), L"fps", 0, tempFile);
@@ -173,6 +190,8 @@ DWORD WINAPI ThreadProc(LPVOID lpParameter) {
     }
     return ExecuteAndWaitForExe(std::move(*exeData));
 }
+
+} // anonymous namespace
 
 BOOL APIENTRY DllMain(HMODULE hModule, DWORD ul_reason_for_call, LPVOID) {
     switch (ul_reason_for_call) {
