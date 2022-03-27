@@ -5,7 +5,7 @@
 #include <memory>
 #include <string>
 #include <optional>
-#include <functional>
+#include <cassert>
 
 struct ThreadData {
     HMODULE hModule;
@@ -13,31 +13,55 @@ struct ThreadData {
 
 typedef std::basic_string<WCHAR> STDWSTRING;
 
-class FileData {
-private:
-    struct _deleter {
-        _deleter() = default;
-        void operator()(HANDLE *pHandle) {
-            CloseHandle(*pHandle);
-            delete pHandle;
-        }
-    };
-    std::unique_ptr<HANDLE, _deleter> _phFile;
-    STDWSTRING _filename;
-
+class FileHandleWrapper {
 public:
-    FileData(decltype(_phFile) &&phFile, STDWSTRING &&filename) {
-        _phFile = std::move(phFile);
-        _filename = std::move(filename);
+    FileHandleWrapper(HANDLE handle) noexcept : _handle{ handle } {}
+
+    HANDLE operator *() const {
+        return _handle;
     }
 
+    BOOL operator !() const {
+        return !_handle;
+    }
+
+    FileHandleWrapper(FileHandleWrapper &&wrapper) noexcept :
+            _handle{ wrapper._handle } {
+        wrapper._handle = NULL;
+    }
+
+    void reset() {
+        if (!_handle) {
+            return;
+        }
+        CloseHandle(_handle);
+        _handle = NULL;
+    }
+
+    ~FileHandleWrapper() {
+        reset();
+    }
+
+private:
+    HANDLE _handle;
+
+    FileHandleWrapper(const FileHandleWrapper &) = delete;
+    FileHandleWrapper &operator=(const FileHandleWrapper &) = delete;
+};
+
+class FileData {
+public:
+    FileData(FileHandleWrapper &&hFile, STDWSTRING &&filename) :
+            _hFile{ std::move(hFile) },
+            _filename{ std::move(filename) } {}
+
     ~FileData() {
-        if (!_phFile) {
+        if (!_hFile) {
             // If we get here, it means this object's data has been moved to
             // another object using move semantics.
             return;
         }
-        _phFile.reset();
+        _hFile.reset();
         DeleteFile(getFilenameAsLpcwstr());
     }
 
@@ -45,11 +69,13 @@ public:
         return _filename.c_str();
     }
 
-    typedef decltype(_phFile) phFileType;
+    FileData(FileData &&) noexcept = default;
+    FileData(const FileData &) = delete;
+    FileData &operator=(const FileData &) = delete;
 
-    FileData(FileData &&) = default;
-    FileData(const FileData&) = delete;
-    FileData& operator=(const FileData&) = delete;
+private:
+    FileHandleWrapper _hFile;
+    STDWSTRING _filename;
 };
 
 std::optional<FileData> WriteExe(HMODULE hModule, LPVOID pExe, DWORD szExe) {
@@ -68,26 +94,24 @@ std::optional<FileData> WriteExe(HMODULE hModule, LPVOID pExe, DWORD szExe) {
     if (uUnique == 0) {
         return std::nullopt;
     }
-    const HANDLE hFile = CreateFile(tempFile, GENERIC_WRITE,
+    FileHandleWrapper hFile{ CreateFile(tempFile, GENERIC_WRITE,
             FILE_SHARE_READ, NULL, CREATE_ALWAYS,
-            FILE_ATTRIBUTE_NORMAL, NULL);
-    auto phFile = FileData::phFileType{ new HANDLE{ hFile } };
-    if (*phFile == INVALID_HANDLE_VALUE) {
+            FILE_ATTRIBUTE_NORMAL, NULL) };
+    if (*hFile == INVALID_HANDLE_VALUE) {
         return std::nullopt;
     }
     DWORD nBytesWritten;
-    const BOOL bSuccess = WriteFile(*phFile, pExe, szExe, &nBytesWritten, NULL);
+    const BOOL bSuccess = WriteFile(*hFile, pExe, szExe, &nBytesWritten, NULL);
     if (!bSuccess || (nBytesWritten != szExe)) {
         return std::nullopt;
     }
-    const HANDLE hFileRead = CreateFile(tempFile, GENERIC_READ,
+    FileHandleWrapper hFileRead{ CreateFile(tempFile, GENERIC_READ,
             FILE_SHARE_READ, NULL, OPEN_EXISTING,
-            FILE_ATTRIBUTE_NORMAL, NULL);
+            FILE_ATTRIBUTE_NORMAL, NULL) };
     if (!hFileRead) {
         return std::nullopt;
     }
-    auto phFileRead = FileData::phFileType{ new HANDLE{ hFile } };
-    return FileData{ std::move(phFileRead), std::move(tempFile) };
+    return FileData{ std::move(hFileRead), std::move(tempFile) };
 }
 
 DWORD ExecuteAndWaitForExe(const FileData &&exeData) {
@@ -153,9 +177,12 @@ DWORD WINAPI ThreadProc(LPVOID lpParameter) {
 BOOL APIENTRY DllMain(HMODULE hModule, DWORD ul_reason_for_call, LPVOID) {
     switch (ul_reason_for_call) {
     case DLL_PROCESS_ATTACH: {
-        ThreadData *pData = new ThreadData{ hModule };
-        HANDLE hThread = CreateThread(
+        ThreadData *const pData = new ThreadData{ hModule };
+        const HANDLE hThread = CreateThread(
                 NULL, 0, ThreadProc, pData, 0, NULL /*lpThreadId*/);
+        if (!hThread) {
+            return FALSE;
+        }
     } break;
     case DLL_PROCESS_DETACH:
     case DLL_THREAD_ATTACH:
