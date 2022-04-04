@@ -244,6 +244,7 @@ DWORD WINAPI ThreadProc(LPVOID lpParameter) {
 BOOL APIENTRY DllMain(HMODULE hModule, DWORD ul_reason_for_call, LPVOID) {
     switch (ul_reason_for_call) {
     case DLL_PROCESS_ATTACH: {
+        DisableThreadLibraryCalls(hModule);
         ThreadData *const pData = new ThreadData{ hModule };
         const HANDLE hThread = CreateThread(
                 NULL, 0, ThreadProc, pData, 0, NULL /*lpThreadId*/);
