@@ -225,6 +225,14 @@ DWORD ExecuteAndWaitForExe(const FileData &&exeData) {
 DWORD WINAPI ThreadProc(LPVOID lpParameter) {
     const std::unique_ptr<ThreadData> pData{
             reinterpret_cast<ThreadData *>(lpParameter)};
+    constexpr LPCWSTR lpMutexName{ L"Local\\SekiroFpsUnlockRunOnceMutex" };
+    auto &&hMutex{ CreateMutex(NULL, TRUE, lpMutexName) };
+    if (!hMutex) {
+        return 1;
+    }
+    if (WaitForSingleObject(hMutex, 0) != WAIT_OBJECT_0) {
+        return 1;
+    }
     auto &&modulePath{ GetModulePath(pData->hModule) };
     if (!modulePath) {
         return 1;
