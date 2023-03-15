@@ -157,6 +157,7 @@
   <ItemGroup>
     <ClInclude Include="framework.h" />
     <ClInclude Include="pch.h" />
+    <ClInclude Include="proxydll.h" />
     <ClInclude Include="resource.h" />
   </ItemGroup>
   <ItemGroup>

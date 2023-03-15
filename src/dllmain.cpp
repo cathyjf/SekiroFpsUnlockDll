@@ -17,6 +17,7 @@
  **/
 
 #include "pch.h"
+#include "proxydll.h"
 #include "resource.h"
 
 #include <memory>

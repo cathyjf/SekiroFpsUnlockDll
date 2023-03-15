@@ -1,4 +1,5 @@
 .vs/
+bin/
 x64/
 SekiroFpsUnlockDll/x64/
 *.aps
