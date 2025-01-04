@@ -4,39 +4,11 @@ This project builds a DLL that automatically unlocks the framerate in
 action when launching the game in the future. This DLL works with the latest
 version of the game available on Steam (1.06).
 
-When `SekiroFpsUnlockDll.dll` is loaded into the address space of Sekiro, it
-automatically spawns a thread that asynchronously patches the memory of the
-game to unlock the framerate. To make this work, you will need to cause the
-Sekiro process to load the DLL. The easiest way to do this currently is with
-[SpecialK](https://github.com/SpecialKO/SpecialK).
-
-## Usage with SpecialK
-First, download the latest version of `SekiroFpsUnlockDll.dll` from the
-[releases section on GitHub](https://github.com/cathyjf/SekiroFpsUnlockDll/releases).
-You can place the `SekiroFpsUnlockDll.dll` file anywhere you like on your
-computer.
-
-To use this DLL in conjunction with SpecialK, add a section like this to the
-SpecialK configuration file for Sekiro:
-
-```ini
-[Import.SekiroFpsUnlockDll]
-Architecture=x64
-Role=ThirdParty
-When=Late
-Filename=C:\Users\Cathy\Documents\My Mods\Sekiro\SekiroFpsUnlockDll.dll
-```
-
-With this section present in the configuration file, SpecialK will load
-`SekiroFpsUnlockDll.dll` when the game starts. This will cause the framerate
-to be automatically unlocked.
-
-Make sure you change the `Filename` entry in the `Import.SekiroFpsUnlockDll`
-section of the SpecialK configuration file to specify the actual path to
-`SekiroFpsUnlockDll.dll` on your computer.
+For instructions on how to install, please refer to the download page for
+the [latest release](https://github.com/cathyjf/SekiroFpsUnlockDll/releases/latest).
 
 ## Configuration
-After `SekiroFpsUnlockDll.dll` is loaded into Sekiro for the first time, a
+After the DLL for this project is loaded into Sekiro for the first time, a
 configuration file named `SekiroFpsUnlockAndMore.xml` will be created in the
 same directory as the DLL. This is the same configuration file format used by
 the `uberhalit/SekiroFpsUnlockAndMore` project. You can view the default
@@ -53,7 +25,7 @@ other features of `uberhalit/SekiroFpsUnlockAndMore`. By default, nothing is
 changed about the game other than the framerate.
 
 ## Building from source
-If you want to build `SekiroFpsUnlockDll.dll` from source, clone this
+If you want to build this project from source, clone this
 repository with the `--recurse` argument:
 ```
 git clone --recurse https://github.com/cathyjf/SekiroFpsUnlockDll
