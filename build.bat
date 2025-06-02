@@ -38,7 +38,9 @@ call :build_dll proxydll\%1.h %1
 exit /B
 
 :build_dll
-cp src\%1 src\proxydll.h
+copy src\%1 src\proxydll.h
+@rem Update the last modified date of the file so that msbuild knows to rebuild.
+copy /b src\proxydll.h+,, src\proxydll.h
 msbuild SekiroFpsUnlockDll.sln -m -p:Configuration=Release
-cp x64\Release\SekiroFpsUnlockDll.dll %BIN_PATH%\%2
+copy x64\Release\SekiroFpsUnlockDll.dll %BIN_PATH%\%2
 exit /B 0
